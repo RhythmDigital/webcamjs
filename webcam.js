@@ -53,6 +53,7 @@
 			image_format: 'jpeg',  // image format (may be jpeg or png)
 			jpeg_quality: 90,      // jpeg image quality from 0 (worst) to 100 (best)
 			enable_flash: true,    // enable flash fallback,
+			android_native: true,  // use native camera on android
 			force_flash: false,    // force flash mode,
 			flip_horiz: false,     // flip image horiz (mirror mode)
 			fps: 30,               // camera frames per second
@@ -92,10 +93,10 @@
 			
 			window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 			this.userMedia = this.userMedia && !!this.mediaDevices && !!window.URL;
-			
-			if (this.iOS || this.android) {
+
+			if (this.iOS || (this.android && this.params.android_native)) {
 				this.userMedia = null;
-			}
+      }
 			
 			// Older versions of firefox (< 21) apparently claim support but user media does not actually work
 			if (navigator.userAgent.match(/Firefox\D+(\d+)/)) {
@@ -338,7 +339,7 @@
 					}
 				});
 			}
-			else if (this.iOS || this.android) {
+			else if (this.iOS || (this.android && this.params.android_native)) {
 				// prepare HTML elements
 				var div = document.createElement('div');
 				div.id = this.container.id+'-ios_div';
@@ -494,7 +495,7 @@
 				delete this.video;
 			}
 	
-			if ((this.userMedia !== true) && this.loaded && (!this.iOS || this.android)) {
+			if ((this.userMedia !== true) && this.loaded && (!(this.iOS || (this.android && this.params.android_native)))) {
 				// call for turn off camera in flash
 				var movie = this.getMovie();
 				if (movie && movie._releaseCamera) movie._releaseCamera();
@@ -889,7 +890,7 @@
 				// fire callback right away
 				func();
 			}
-			else if (this.iOS || this.android) {
+			else if (this.iOS || (this.android && this.params.android_native)) {
 				var div = document.getElementById(this.container.id+'-ios_div');
 				var img = document.getElementById(this.container.id+'-ios_img');
 				var input = document.getElementById(this.container.id+'-ios_input');
@@ -1037,8 +1038,6 @@
 		
 	};
 	
-	Webcam.init();
-	
 	if (typeof define === 'function' && define.amd) {
 		define( function() { return Webcam; } );
 	} 
@@ -1050,4 +1049,3 @@
 	}
 	
 	}(window));
-	
