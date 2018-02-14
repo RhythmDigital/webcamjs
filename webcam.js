@@ -32,7 +32,9 @@
 	
 	FlashError.prototype = new IntermediateInheritor();
 	WebcamError.prototype = new IntermediateInheritor();
-	
+
+	console.log("User agent:" + navigator.userAgent);
+
 	var Webcam = {
 		version: '1.0.24',
 		
@@ -51,6 +53,7 @@
 			height: 0,
 			dest_width: 0,         // size of captured image
 			dest_height: 0,        // these default to width/height
+      useNaturalSizeOnMobile: true, // bypass dest_width & dest_height on mobile images
 			image_format: 'jpeg',  // image format (may be jpeg or png)
 			jpeg_quality: 90,      // jpeg image quality from 0 (worst) to 100 (best)
 			enable_flash: true,    // enable flash fallback,
@@ -68,7 +71,6 @@
 			iosPlaceholderText: 'Click here to open camera.',
 			user_callback: null,    // callback function for snapshot (used if no user_callback parameter given to snap function)
 			user_canvas: null,      // user provided canvas for snapshot (used if no user_canvas parameter given to snap function)
-			take_photo_button_id: null, 
 		},
 	
 		errors: {
@@ -79,6 +81,8 @@
 		hooks: {}, // callback hook functions
 		
 		init: function() {
+
+			console.log("Android? " + this.android + " / iOS ? " + this.iOS);
 			// initialize, check for getUserMedia support
 			var self = this;
 			
@@ -232,8 +236,6 @@
 		},
 
 		initNativeCamera: function() {
-			
-			this.usingMobileCamera = true;
 
 				var input = document.createElement('input');
 				input.id = this.container.id+'-ios_input';
@@ -256,17 +258,23 @@
 						var image = new Image();
 						image.addEventListener('load', function(event) {
 							var canvas = document.createElement('canvas');
-							canvas.width = params.dest_width;
-							canvas.height = params.dest_height;
 							var ctx = canvas.getContext('2d');
-	
-							// crop and scale image for final size
-							ratio = Math.min(image.width / params.dest_width, image.height / params.dest_height);
-							var sw = params.dest_width * ratio;
-							var sh = params.dest_height * ratio;
-							var sx = (image.width - sw) / 2;
-							var sy = (image.height - sh) / 2;
-							ctx.drawImage(image, sx, sy, sw, sh, 0, 0, params.dest_width, params.dest_height);
+
+							if(params.useNaturalSizeOnMobile) {
+                canvas.width = image.naturalWidth;
+                canvas.height = image.naturalHeight;
+                ctx.drawImage(image, 0, 0);
+							} else {
+                canvas.width = params.dest_width;
+                canvas.height = params.dest_height;
+                // crop and scale image for final size
+                ratio = Math.min(image.width / params.dest_width, image.height / params.dest_height);
+                var sw = params.dest_width * ratio;
+                var sh = params.dest_height * ratio;
+                var sx = (image.width - sw) / 2;
+                var sy = (image.height - sh) / 2;
+                ctx.drawImage(image, sx, sy, sw, sh, 0, 0, params.dest_width, params.dest_height);
+							}
 	
 							// fire user callback if desired
 							params.user_callback(
@@ -311,10 +319,11 @@
 		},
 
 		launchNativeCamera: function() {
+			console.log("Launching native camera");
       this.nativeCameraInput.style.display = 'block';
       this.nativeCameraInput.focus();
       this.nativeCameraInput.click();
-      this.nativeCameraInput.style.display = 'none';
+      // this.nativeCameraInput.style.display = 'none';
 		},
 
 		attach: function(elem) {
@@ -367,22 +376,22 @@
 				// setup webcam video container
 				var video = document.createElement('video');
 				video.setAttribute('autoplay', 'autoplay');
-				video.style.width = '' + this.params.dest_width + 'px';
-				video.style.height = '' + this.params.dest_height + 'px';
+				video.style.width = '100%';// + this.params.dest_width + 'px';
+				// video.style.height = '' + this.params.dest_height + 'px';
 				
-				if ((scaleX != 1.0) || (scaleY != 1.0)) {
-					elem.style.overflow = 'hidden';
-					video.style.webkitTransformOrigin = '0px 0px';
-					video.style.mozTransformOrigin = '0px 0px';
-					video.style.msTransformOrigin = '0px 0px';
-					video.style.oTransformOrigin = '0px 0px';
-					video.style.transformOrigin = '0px 0px';
-					video.style.webkitTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.mozTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.msTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.oTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.transform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-				}
+				// if ((scaleX != 1.0) || (scaleY != 1.0)) {
+				// 	elem.style.overflow = 'hidden';
+				// 	video.style.webkitTransformOrigin = '0px 0px';
+				// 	video.style.mozTransformOrigin = '0px 0px';
+				// 	video.style.msTransformOrigin = '0px 0px';
+				// 	video.style.oTransformOrigin = '0px 0px';
+				// 	video.style.transformOrigin = '0px 0px';
+				// 	video.style.webkitTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+				// 	video.style.mozTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+				// 	video.style.msTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+				// 	video.style.oTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+				// 	video.style.transform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+				// }
 				
 				// add video element to dom
 				elem.appendChild( video );
@@ -431,6 +440,7 @@
 				});
 			}
 			else if (this.params.enable_flash && this.detectFlash()) {
+				console.log("Falling back to flash");
 				// flash fallback
 				window.Webcam = Webcam; // needed for flash-to-js interface
 				var div = document.createElement('div');
@@ -453,23 +463,23 @@
 				this.dispatch('error', new WebcamError( this.params.noInterfaceFoundText ));
 			}
 			
-			// setup final crop for live preview
-			if (this.params.crop_width && this.params.crop_height) {
-				var scaled_crop_width = Math.floor( this.params.crop_width * scaleX );
-				var scaled_crop_height = Math.floor( this.params.crop_height * scaleY );
-				
-				elem.style.width = '' + scaled_crop_width + 'px';
-				elem.style.height = '' + scaled_crop_height + 'px';
-				elem.style.overflow = 'hidden';
-				
-				elem.scrollLeft = Math.floor( (this.params.width / 2) - (scaled_crop_width / 2) );
-				elem.scrollTop = Math.floor( (this.params.height / 2) - (scaled_crop_height / 2) );
-			}
-			else {
-				// no crop, set size to desired
-				elem.style.width = '' + this.params.width + 'px';
-				elem.style.height = '' + this.params.height + 'px';
-			}
+			// // setup final crop for live preview
+			// if (this.params.crop_width && this.params.crop_height) {
+			// 	var scaled_crop_width = Math.floor( this.params.crop_width * scaleX );
+			// 	var scaled_crop_height = Math.floor( this.params.crop_height * scaleY );
+			//
+			// 	elem.style.width = '' + scaled_crop_width + 'px';
+			// 	elem.style.height = '' + scaled_crop_height + 'px';
+			// 	elem.style.overflow = 'hidden';
+			//
+			// 	elem.scrollLeft = Math.floor( (this.params.width / 2) - (scaled_crop_width / 2) );
+			// 	elem.scrollTop = Math.floor( (this.params.height / 2) - (scaled_crop_height / 2) );
+			// }
+			// else {
+			// 	// no crop, set size to desired
+			// 	elem.style.width = '' + this.params.width + 'px';
+			// 	elem.style.height = '' + this.params.height + 'px';
+			// }
 		},
 		
 		reset: function() {
@@ -667,7 +677,45 @@
 			}
 			
 			// construct object/embed tag
-			html += '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" type="application/x-shockwave-flash" codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="'+this.params.width+'" height="'+this.params.height+'" id="webcam_movie_obj" align="middle"><param name="wmode" value="opaque" /><param name="allowScriptAccess" value="always" /><param name="allowFullScreen" value="false" /><param name="movie" value="'+swfURL+'" /><param name="loop" value="false" /><param name="menu" value="false" /><param name="quality" value="best" /><param name="bgcolor" value="#ffffff" /><param name="flashvars" value="'+flashvars+'"/><embed id="webcam_movie_embed" src="'+swfURL+'" wmode="opaque" loop="false" menu="false" quality="best" bgcolor="#ffffff" width="'+this.params.width+'" height="'+this.params.height+'" name="webcam_movie_embed" align="middle" allowScriptAccess="always" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" flashvars="'+flashvars+'"></embed></object>';
+			html += '<div class="webcam_flash_wrapper">' +
+				'<div class="webcam_flash_anchor">' +
+					'<object class="webcam_flash" ' +
+							'classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" ' +
+							'type="application/x-shockwave-flash" ' +
+							'codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" ' +
+        			// 'width="100%"' +
+							'id="webcam_movie_obj" ' +
+							'align="middle">' +
+						'<param name="wmode" value="opaque" />' +
+						'<param name="allowScriptAccess" value="always" />' +
+						'<param name="allowFullScreen" value="false" />' +
+						'<param name="movie" value="'+swfURL+'" />' +
+						'<param name="loop" value="false" />' +
+						'<param name="menu" value="false" />' +
+						'<param name="quality" value="best" />' +
+						'<param name="bgcolor" value="#000000" />' +
+						'<param name="flashvars" value="'+flashvars+'"/>' +
+        		'<param name="SCALE" value="exactfit"/>' +
+						'<embed id="webcam_movie_embed" ' +
+							'src="'+swfURL+'" ' +
+							'wmode="opaque" ' +
+							'loop="false" ' +
+							'menu="false" ' +
+							'quality="best" ' +
+							'bgcolor="#000000" ' +
+      				'width="100%"' +
+        			'height="100%"' +
+							'name="webcam_movie_embed" ' +
+							'align="middle" ' +
+							'SCALE="exactfit" ' +
+							'allowScriptAccess="always" ' +
+							'allowFullScreen="false" ' +
+							'type="application/x-shockwave-flash" ' +
+							'pluginspage="http://www.macromedia.com/go/getflashplayer" ' +
+							'flashvars="'+flashvars+'"></embed>' +
+						'</object>' +
+					'</div>' +
+				'</div>';
 			
 			return html;
 		},
@@ -845,34 +893,36 @@
 					context.drawImage(this, 0, 0, params.dest_width, params.dest_height);
 				}
 				
-				// crop if desired
-				if (params.crop_width && params.crop_height) {
-					var crop_canvas = document.createElement('canvas');
-					crop_canvas.width = params.crop_width;
-					crop_canvas.height = params.crop_height;
-					var crop_context = crop_canvas.getContext('2d');
-					
-					crop_context.drawImage( canvas, 
-						Math.floor( (params.dest_width / 2) - (params.crop_width / 2) ),
-						Math.floor( (params.dest_height / 2) - (params.crop_height / 2) ),
-						params.crop_width,
-						params.crop_height,
-						0,
-						0,
-						params.crop_width,
-						params.crop_height
-					);
-					
-					// swap canvases
-					context = crop_context;
-					canvas = crop_canvas;
-				}
+				// // crop if desired
+				// if (params.crop_width && params.crop_height) {
+				// 	var crop_canvas = document.createElement('canvas');
+				// 	crop_canvas.width = params.crop_width;
+				// 	crop_canvas.height = params.crop_height;
+				// 	var crop_context = crop_canvas.getContext('2d');
+				//
+				// 	crop_context.drawImage( canvas,
+				// 		Math.floor( (params.dest_width / 2) - (params.crop_width / 2) ),
+				// 		Math.floor( (params.dest_height / 2) - (params.crop_height / 2) ),
+				// 		params.crop_width,
+				// 		params.crop_height,
+				// 		0,
+				// 		0,
+				// 		params.crop_width,
+				// 		params.crop_height
+				// 	);
+				//
+				// 	// swap canvases
+				// 	context = crop_context;
+				// 	canvas = crop_canvas;
+				// }
 				
 				// render to user canvas if desired
 				if (user_canvas) {
 					var user_context = user_canvas.getContext('2d');
 					user_context.drawImage( canvas, 0, 0 );
 				}
+
+				console.log("made it here");
 				
 				// fire user callback if desired
 				user_callback(
@@ -951,6 +1001,7 @@
 	
 				case 'error':
 					// Flash error
+					// console.error("Error launching flash camera. Fallback to file upload here!", new FlashError(msg));
 					this.dispatch('error', new FlashError(msg));
 					break;
 	
