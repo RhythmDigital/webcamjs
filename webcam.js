@@ -41,10 +41,11 @@
 		loaded: false,   // true when webcam movie finishes loading
 		live: false,     // true when webcam is initialized and ready to snap
 		userMedia: true, // true when getUserMedia is supported natively
-	
+		showingPreview: false,
+		
 		iOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
 		android: /Android/.test(navigator.userAgent) && !window.MSStream,
-	
+		
 		params: {
 			width: 0,
 			height: 0,
@@ -53,6 +54,7 @@
 			image_format: 'jpeg',  // image format (may be jpeg or png)
 			jpeg_quality: 90,      // jpeg image quality from 0 (worst) to 100 (best)
 			enable_flash: true,    // enable flash fallback,
+			enable_file_picker: true, // enable file picker fallback for FileReader
 			android_native: true,  // use native camera on android
 			force_flash: false,    // force flash mode,
 			flip_horiz: false,     // flip image horiz (mirror mode)
@@ -65,7 +67,8 @@
 			unfreeze_snap: true,    // Whether to unfreeze the camera after snap (defaults to true)
 			iosPlaceholderText: 'Click here to open camera.',
 			user_callback: null,    // callback function for snapshot (used if no user_callback parameter given to snap function)
-			user_canvas: null       // user provided canvas for snapshot (used if no user_canvas parameter given to snap function)
+			user_canvas: null,      // user provided canvas for snapshot (used if no user_canvas parameter given to snap function)
+			take_photo_button_id: null, 
 		},
 	
 		errors: {
@@ -227,6 +230,10 @@
 			// start transformation by load event
 			img.src = origObjURL;
 		},
+
+		launchNativeCamera: function() {
+			
+		},
 		
 		attach: function(elem) {
 			// create webcam preview and attach to DOM element
@@ -234,9 +241,21 @@
 			if (typeof(elem) == 'string') {
 				elem = document.getElementById(elem) || document.querySelector(elem);
 			}
+
 			if (!elem) {
-				return this.dispatch('error', new WebcamError("Could not locate DOM element to attach to."));
+				return this.dispatch('error', new WebcamError("Could not locate DOM element for camera preview."));
 			}
+
+			if (typeof(photoButton) == 'string') {
+				photoButton = document.getElementById(photoButton) || document.querySelector(photoButton);
+				console.log("Photo button:" , photoButton);
+			}
+			if (!photoButton) {
+				return this.dispatch('error', new WebcamError("Could not locate DOM element for photo button."));
+			}
+
+			this.photoButton = photoButton;
+
 			this.container = elem;
 			elem.innerHTML = ''; // start with empty element
 			
@@ -340,28 +359,9 @@
 				});
 			}
 			else if (this.iOS || (this.android && this.params.android_native)) {
-				// prepare HTML elements
-				var div = document.createElement('div');
-				div.id = this.container.id+'-ios_div';
-				div.className = 'webcamjs-ios-placeholder';
-				div.style.width = '' + this.params.width + 'px';
-				div.style.height = '' + this.params.height + 'px';
-				div.style.textAlign = 'center';
-				div.style.display = 'table-cell';
-				div.style.verticalAlign = 'middle';
-				div.style.backgroundRepeat = 'no-repeat';
-				div.style.backgroundSize = 'contain';
-				div.style.backgroundPosition = 'center';
-				var span = document.createElement('span');
-				span.className = 'webcamjs-ios-text';
-				span.innerHTML = this.params.iosPlaceholderText;
-				div.appendChild(span);
-				var img = document.createElement('img');
-				img.id = this.container.id+'-ios_img';
-				img.style.width = '' + this.params.dest_width + 'px';
-				img.style.height = '' + this.params.dest_height + 'px';
-				img.style.display = 'none';
-				div.appendChild(img);
+
+				this.usingMobileCamera = true;
+
 				var input = document.createElement('input');
 				input.id = this.container.id+'-ios_input';
 				input.setAttribute('type', 'file');
@@ -372,9 +372,11 @@
 				var params = this.params;
 				// add input listener to load the selected image
 				input.addEventListener('change', function(event) {
+					console.log('input change');
+
 					if (event.target.files.length > 0 && event.target.files[0].type.indexOf('image/') == 0) {
 						var objURL = URL.createObjectURL(event.target.files[0]);
-	
+						
 						// load image with auto scale and crop
 						var image = new Image();
 						image.addEventListener('load', function(event) {
@@ -391,9 +393,13 @@
 							var sy = (image.height - sh) / 2;
 							ctx.drawImage(image, sx, sy, sw, sh, 0, 0, params.dest_width, params.dest_height);
 	
-							var dataURL = canvas.toDataURL();
-							img.src = dataURL;
-							div.style.backgroundImage = "url('"+dataURL+"')";
+							// fire user callback if desired
+							params.user_callback(
+								params.user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
+								canvas,
+								ctx
+							);
+
 						}, false);
 						
 						// read EXIF data
@@ -424,21 +430,16 @@
 					}
 				}, false);
 				input.style.display = 'none';
-				elem.appendChild(input);
-				// make div clickable for open camera interface
-				div.addEventListener('click', function(event) {
-					if (params.user_callback) {
-						// global user_callback defined - create the snapshot
-						self.snap(params.user_callback, params.user_canvas);
-					} else {
-						// no global callback definied for snapshot, load image and wait for external snap method call
+				photoButton.appendChild(input);
+				
+				// make photo button clickable for open camera interface
+				photoButton.addEventListener('click', function(event) {
 						input.style.display = 'block';
 						input.focus();
 						input.click();
 						input.style.display = 'none';
-					}
 				}, false);
-				elem.appendChild(div);
+
 				this.loaded = true;
 				this.live = true;
 			}
@@ -448,6 +449,18 @@
 				var div = document.createElement('div');
 				div.innerHTML = this.getSWFHTML();
 				elem.appendChild( div );
+			}
+			else if (this.params.enable_file_picker && window.FileReader) {
+				var input = document.createElement('input');
+				input.id = this.container.id+'-file_input';
+				input.setAttribute('type', 'file');
+				input.setAttribute('accept', 'image/*');
+				elem.appendChild(input);
+
+				/**
+				 * TODO: implement file picker for file reader compatible browsers
+				 */
+
 			}
 			else {
 				this.dispatch('error', new WebcamError( this.params.noInterfaceFoundText ));
