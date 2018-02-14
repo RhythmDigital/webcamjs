@@ -231,10 +231,92 @@
 			img.src = origObjURL;
 		},
 
-		launchNativeCamera: function() {
+		initNativeCamera: function() {
 			
+			this.usingMobileCamera = true;
+
+				var input = document.createElement('input');
+				input.id = this.container.id+'-ios_input';
+				input.setAttribute('type', 'file');
+				input.setAttribute('accept', 'image/*');
+				input.setAttribute('capture', 'camera');
+
+				this.nativeCameraInput = input;
+				
+				var self = this;
+				var params = this.params;
+				// add input listener to load the selected image
+				input.addEventListener('change', function(event) {
+					console.log('input change');
+
+					if (event.target.files.length > 0 && event.target.files[0].type.indexOf('image/') == 0) {
+						var objURL = URL.createObjectURL(event.target.files[0]);
+						
+						// load image with auto scale and crop
+						var image = new Image();
+						image.addEventListener('load', function(event) {
+							var canvas = document.createElement('canvas');
+							canvas.width = params.dest_width;
+							canvas.height = params.dest_height;
+							var ctx = canvas.getContext('2d');
+	
+							// crop and scale image for final size
+							ratio = Math.min(image.width / params.dest_width, image.height / params.dest_height);
+							var sw = params.dest_width * ratio;
+							var sh = params.dest_height * ratio;
+							var sx = (image.width - sw) / 2;
+							var sy = (image.height - sh) / 2;
+							ctx.drawImage(image, sx, sy, sw, sh, 0, 0, params.dest_width, params.dest_height);
+	
+							// fire user callback if desired
+							params.user_callback(
+								params.user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
+								canvas,
+								ctx
+							);
+
+						}, false);
+						
+						// read EXIF data
+						var fileReader = new FileReader();
+						fileReader.addEventListener('load', function(e) {
+							var orientation = self.exifOrientation(e.target.result);
+							if (orientation > 1) {
+								// image need to rotate (see comments on fixOrientation method for more information)
+								// transform image and load to image object
+								self.fixOrientation(objURL, orientation, image);
+							} else {
+								// load image data to image object
+								image.src = objURL;
+							}
+						}, false);
+						
+						// Convert image data to blob format
+						var http = new XMLHttpRequest();
+						http.open("GET", objURL, true);
+						http.responseType = "blob";
+						http.onload = function(e) {
+							if (this.status == 200 || this.status === 0) {
+								fileReader.readAsArrayBuffer(this.response);
+							}
+						};
+						http.send();
+	
+					}
+				}, false);
+				input.style.display = 'none';
+
+				this.loaded = true;
+				this.live = true;
 		},
-		
+
+		launchNativeCamera: function() {
+      this.nativeCameraInput.style.display = 'block';
+      this.nativeCameraInput.focus();
+      this.nativeCameraInput.click();
+      this.nativeCameraInput.style.display = 'none';
+		},
+
 		attach: function(elem) {
 			// create webcam preview and attach to DOM element
 			// pass in actual DOM reference, ID, or CSS selector
@@ -245,16 +327,6 @@
 			if (!elem) {
 				return this.dispatch('error', new WebcamError("Could not locate DOM element for camera preview."));
 			}
-
-			if (typeof(photoButton) == 'string') {
-				photoButton = document.getElementById(photoButton) || document.querySelector(photoButton);
-				console.log("Photo button:" , photoButton);
-			}
-			if (!photoButton) {
-				return this.dispatch('error', new WebcamError("Could not locate DOM element for photo button."));
-			}
-
-			this.photoButton = photoButton;
 
 			this.container = elem;
 			elem.innerHTML = ''; // start with empty element
@@ -357,91 +429,6 @@
 						self.dispatch('error', err);
 					}
 				});
-			}
-			else if (this.iOS || (this.android && this.params.android_native)) {
-
-				this.usingMobileCamera = true;
-
-				var input = document.createElement('input');
-				input.id = this.container.id+'-ios_input';
-				input.setAttribute('type', 'file');
-				input.setAttribute('accept', 'image/*');
-				input.setAttribute('capture', 'camera');
-				
-				var self = this;
-				var params = this.params;
-				// add input listener to load the selected image
-				input.addEventListener('change', function(event) {
-					console.log('input change');
-
-					if (event.target.files.length > 0 && event.target.files[0].type.indexOf('image/') == 0) {
-						var objURL = URL.createObjectURL(event.target.files[0]);
-						
-						// load image with auto scale and crop
-						var image = new Image();
-						image.addEventListener('load', function(event) {
-							var canvas = document.createElement('canvas');
-							canvas.width = params.dest_width;
-							canvas.height = params.dest_height;
-							var ctx = canvas.getContext('2d');
-	
-							// crop and scale image for final size
-							ratio = Math.min(image.width / params.dest_width, image.height / params.dest_height);
-							var sw = params.dest_width * ratio;
-							var sh = params.dest_height * ratio;
-							var sx = (image.width - sw) / 2;
-							var sy = (image.height - sh) / 2;
-							ctx.drawImage(image, sx, sy, sw, sh, 0, 0, params.dest_width, params.dest_height);
-	
-							// fire user callback if desired
-							params.user_callback(
-								params.user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
-								canvas,
-								ctx
-							);
-
-						}, false);
-						
-						// read EXIF data
-						var fileReader = new FileReader();
-						fileReader.addEventListener('load', function(e) {
-							var orientation = self.exifOrientation(e.target.result);
-							if (orientation > 1) {
-								// image need to rotate (see comments on fixOrientation method for more information)
-								// transform image and load to image object
-								self.fixOrientation(objURL, orientation, image);
-							} else {
-								// load image data to image object
-								image.src = objURL;
-							}
-						}, false);
-						
-						// Convert image data to blob format
-						var http = new XMLHttpRequest();
-						http.open("GET", objURL, true);
-						http.responseType = "blob";
-						http.onload = function(e) {
-							if (this.status == 200 || this.status === 0) {
-								fileReader.readAsArrayBuffer(this.response);
-							}
-						};
-						http.send();
-	
-					}
-				}, false);
-				input.style.display = 'none';
-				photoButton.appendChild(input);
-				
-				// make photo button clickable for open camera interface
-				photoButton.addEventListener('click', function(event) {
-						input.style.display = 'block';
-						input.focus();
-						input.click();
-						input.style.display = 'none';
-				}, false);
-
-				this.loaded = true;
-				this.live = true;
 			}
 			else if (this.params.enable_flash && this.detectFlash()) {
 				// flash fallback
