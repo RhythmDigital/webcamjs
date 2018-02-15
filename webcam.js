@@ -433,12 +433,12 @@
 				.catch( function(err) {
 					// JH 2016-07-31 Instead of dispatching error, now falling back to Flash if userMedia fails (thx @john2014)
 					// JH 2016-08-07 But only if flash is actually installed -- if not, dispatch error here and now.
-					if (self.params.enable_flash && self.detectFlash()) {
-						setTimeout( function() { self.params.force_flash = 1; self.attach(elem); }, 1 );
-					}
-					else {
+					// if (self.params.enable_flash && self.detectFlash()) {
+					// 	setTimeout( function() { self.params.force_flash = 1; self.attach(elem); }, 1 );
+					// }
+					// else {
 						self.dispatch('error', err);
-					}
+					// }
 				});
 			}
 			else if (this.params.enable_flash && this.detectFlash()) {
@@ -591,7 +591,7 @@
 				}
 	
 				// default error handler if no custom one specified
-				alert("Webcam.js Error: " + message);
+				console.error("Webcam.js Error: " + message);
 			}
 			
 			return false; // no hook defined
