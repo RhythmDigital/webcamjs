@@ -445,6 +445,7 @@
 				// setup webcam video container
 				var video = document.createElement('video');
 				video.setAttribute('autoplay', 'autoplay');
+				video.setAttribute('data-object-fit', 'cover');
 				video.style.width = '' + this.params.dest_width + 'px';
 				video.style.height = '' + this.params.dest_height + 'px';
 				video.style.display = 'block';
@@ -492,6 +493,9 @@
             self.params.width = self.params.dest_width = e.target.videoWidth;
             self.params.height = self.params.dest_height = e.target.videoHeight;
 
+            video.style.width = '' + self.params.width + 'px';
+            video.style.height = '' + self.params.height + 'px';
+
 						self.stream = stream;
 						self.loaded = true;
 						self.live = true;
@@ -525,8 +529,8 @@
 				// flash fallback
 				window.Webcam = Webcam; // needed for flash-to-js interface
 				var div = document.createElement('div');
-				div.innerHTML = this.getSWFHTML();
-				elem.appendChild( div );
+				elem.innerHTML = this.getSWFHTML();
+				// elem.appendChild( div );
 			}
 			else if (this.params.enable_file_picker && window.FileReader) {
 				var input = document.createElement('input');
@@ -758,8 +762,8 @@
 			}
 
 
-      html += '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" type="application/x-shockwave-flash" codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="'+this.params.width+'" height="'+this.params.height+'" id="webcam_movie_obj" align="middle"><param name="wmode" value="opaque" /><param name="allowScriptAccess" value="always" /><param name="allowFullScreen" value="false" /><param name="movie" value="'+swfURL+'" /><param name="loop" value="false" /><param name="menu" value="false" /><param name="quality" value="best" /><param name="bgcolor" value="#000000" /><param name="flashvars" value="'+flashvars+'"/><embed id="webcam_movie_embed" src="'+swfURL+'" wmode="opaque" loop="false" menu="false" quality="best" bgcolor="#000000" width="'+this.params.width+'" height="'+this.params.height+'" name="webcam_movie_embed" align="middle" allowScriptAccess="always" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" flashvars="'+flashvars+'"></embed></object>';
-			
+      html += '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" type="application/x-shockwave-flash" codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="100%" height="100%" id="webcam_movie_obj" align="middle"><param name="wmode" value="opaque" /><param name="allowScriptAccess" value="always" /><param name="scale" value="showAll" /><param name="allowFullScreen" value="false" /><param name="movie" value="'+swfURL+'" /><param name="loop" value="false" /><param name="menu" value="false" /><param name="quality" value="best" /><param name="bgcolor" value="#000000" /><param name="flashvars" value="'+flashvars+'"/><embed id="webcam_movie_embed" src="'+swfURL+'" wmode="opaque" loop="false" menu="false" quality="best" bgcolor="#000000" width="100%" height="100%" name="webcam_movie_embed" align="middle" allowScriptAccess="always" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" flashvars="'+flashvars+'"></embed></object>';
+
 			return html;
 		},
 		
