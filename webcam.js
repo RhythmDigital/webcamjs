@@ -241,7 +241,9 @@
 				input.id = this.container.id+'-ios_input';
 				input.setAttribute('type', 'file');
 				input.setAttribute('accept', 'image/*');
-				input.setAttribute('capture', 'camera');
+
+				// uncomment this if you want to force camera only on native (android & iPad, doesn't make a difference on iPhone)
+				// input.setAttribute('capture', 'camera'); 
 
 				this.nativeCameraInput = input;
 				
