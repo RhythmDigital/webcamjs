@@ -27,6 +27,35 @@
 		this.message = temp.message;
 	}
 	
+	function ProcessingEvent(type) {
+		this.name = "ProcessingEvent";
+		this.type = type;
+	}
+
+	/**
+	 * To blob polyfill
+	 */
+	if (!HTMLCanvasElement.prototype.toBlob) {
+		Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
+			value: function (callback, type, quality) {
+				var canvas = this;
+				setTimeout(function() {
+	
+					var binStr = atob( canvas.toDataURL(type, quality).split(',')[1] ),
+							len = binStr.length,
+							arr = new Uint8Array(len);
+	
+					for (var i = 0; i < len; i++ ) {
+						arr[i] = binStr.charCodeAt(i);
+					}
+	
+					callback( new Blob( [arr], {type: type || 'image/png'} ) );
+	
+				});
+			}
+		});
+	}
+
 	IntermediateInheritor = function() {};
 	IntermediateInheritor.prototype = Error.prototype;
 	
@@ -197,13 +226,22 @@
 			return 0;
 		},
 		
-		fixOrientation: function(origObjURL, orientation, targetImg) {
+		fixOrientation: function(origObjURL, orientation, targetImg, callback) {
+
 			// fix image orientation based on exif orientation data
 			// exif orientation information
 			//    http://www.impulseadventure.com/photo/exif-orientation.html
 			//    link source wikipedia (https://en.wikipedia.org/wiki/Exif#cite_note-20)
+			self = this;
+			this.dispatch('processing', new ProcessingEvent('fix-orientation-load-image-for-corrections'));
+
 			var img = new Image();
 			img.addEventListener('load', function(event) {
+
+				console.log("Image load 2");
+
+				self.dispatch('processing', new ProcessingEvent('fix-orientation-correcting-orientation'));
+
 				var canvas = document.createElement('canvas');
 				var ctx = canvas.getContext('2d');
 				
@@ -228,8 +266,12 @@
 				}
 	
 				ctx.drawImage(img, 0, 0);
+
+				self.dispatch('processing', new ProcessingEvent('fix-orientation-getting-data-url'));
 				// pass rotated image data to the target image container
-				targetImg.src = canvas.toDataURL();
+				targetImg.src = canvas.toDataURL("image/jpeg", 0.9);
+
+				callback(targetImg);
 			}, false);
 			// start transformation by load event
 			img.src = origObjURL;
@@ -253,12 +295,25 @@
 				input.addEventListener('change', function(event) {
 					console.log('input change');
 
+					self.dispatch('processing', new ProcessingEvent('loading-image'));
+
 					if (event.target.files.length > 0 && event.target.files[0].type.indexOf('image/') == 0) {
 						var objURL = URL.createObjectURL(event.target.files[0]);
 						
 						// load image with auto scale and crop
 						var image = new Image();
 						image.addEventListener('load', function(event) {
+
+
+							console.log("Image load normal");
+
+							// resize image here
+
+
+							// fix orientation here
+
+							self.dispatch('processing', new ProcessingEvent('resizing-image'));
+
 							var canvas = document.createElement('canvas');
 							var ctx = canvas.getContext('2d');
 
@@ -280,24 +335,30 @@
 	
 							// fire user callback if desired
 							params.user_callback(
-								params.user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
-								canvas,
-								ctx
+								image.src, //params.user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
+								null, // canvas,
+								null, //ctx
 							);
 
 						}, false);
 						
 						// read EXIF data
+						self.dispatch('processing', new ProcessingEvent('fix-orientation-load-image'));
 						var fileReader = new FileReader();
 						fileReader.addEventListener('load', function(e) {
+							self.dispatch('processing', new ProcessingEvent('fix-orientation-read-exif'));
 							var orientation = self.exifOrientation(e.target.result);
 							if (orientation > 1) {
 								// image need to rotate (see comments on fixOrientation method for more information)
 								// transform image and load to image object
-								self.fixOrientation(objURL, orientation, image);
+								self.fixOrientation(objURL, orientation, image, () => {
+									self.dispatch('processing', new ProcessingEvent('fix-orientation-complete'));
+								});
 							} else {
 								// load image data to image object
 								image.src = objURL;
+								console.log("Image does not need re-orientating");
+								self.dispatch('processing', new ProcessingEvent('fix-orientation-complete'));
 							}
 						}, false);
 						
@@ -1087,7 +1148,7 @@
 			
 			// send data to server
 			http.send(form);
-		}
+		},
 		
 	};
 	
