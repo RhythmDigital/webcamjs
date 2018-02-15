@@ -27,9 +27,19 @@
 		this.message = temp.message;
 	}
 	
-	function ProcessingEvent(type) {
-		this.name = "ProcessingEvent";
+	var processingStartTime = new Date().getTime();
+	var prevProcessingEventTime = new Date().getTime();
+	function ProcessingEvent(type, resetStartTime) {
+
+		if(resetStartTime) {
+			prevProcessingEventTime = processingStartTime = new Date().getTime();
+		}
+
+		var now = new Date().getTime();
+		this.name = "ProcessingEvent :: " + (now - processingStartTime) + "ms" + " :: diff " + (now - prevProcessingEventTime) + "ms";
 		this.type = type;
+
+		prevProcessingEventTime = now;
 	}
 
 	/**
@@ -243,7 +253,7 @@
 				self.dispatch('processing', new ProcessingEvent('fix-orientation-correcting-orientation'));
 
 				var canvas = document.createElement('canvas');
-				var ctx = canvas.getContext('2d');
+				var ctx = canvas.getContext('2d', { alpha: false });
 				
 				// switch width height if orientation needed
 				if (orientation < 5) {
@@ -295,7 +305,7 @@
 				input.addEventListener('change', function(event) {
 					console.log('input change');
 
-					self.dispatch('processing', new ProcessingEvent('loading-image'));
+					self.dispatch('processing', new ProcessingEvent('loading-image', true));
 
 					if (event.target.files.length > 0 && event.target.files[0].type.indexOf('image/') == 0) {
 						var objURL = URL.createObjectURL(event.target.files[0]);
@@ -304,18 +314,10 @@
 						var image = new Image();
 						image.addEventListener('load', function(event) {
 
-
-							console.log("Image load normal");
-
-							// resize image here
-
-
-							// fix orientation here
-
 							self.dispatch('processing', new ProcessingEvent('resizing-image'));
 
 							var canvas = document.createElement('canvas');
-							var ctx = canvas.getContext('2d');
+							var ctx = canvas.getContext('2d', { alpha: false });
 
 							if(params.useNaturalSizeOnMobile) {
                 canvas.width = image.naturalWidth;
@@ -334,24 +336,28 @@
 							}
 	
 							// fire user callback if desired
+							self.dispatch('processing', new ProcessingEvent('complete'));
 							params.user_callback(
 								image.src, //params.user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
-								null, // canvas,
-								null, //ctx
+								canvas,
+								ctx
 							);
 
 						}, false);
 						
 						// read EXIF data
 						self.dispatch('processing', new ProcessingEvent('fix-orientation-load-image'));
+
 						var fileReader = new FileReader();
 						fileReader.addEventListener('load', function(e) {
 							self.dispatch('processing', new ProcessingEvent('fix-orientation-read-exif'));
 							var orientation = self.exifOrientation(e.target.result);
+							self.dispatch('processing', new ProcessingEvent('fix-orientation-exif-read-complete'));
+
 							if (orientation > 1) {
 								// image need to rotate (see comments on fixOrientation method for more information)
 								// transform image and load to image object
-								self.fixOrientation(objURL, orientation, image, () => {
+								self.fixOrientation(objURL, orientation, image, function() {
 									self.dispatch('processing', new ProcessingEvent('fix-orientation-complete'));
 								});
 							} else {
@@ -439,23 +445,25 @@
 				// setup webcam video container
 				var video = document.createElement('video');
 				video.setAttribute('autoplay', 'autoplay');
-				video.style.width = '100%';// + this.params.dest_width + 'px';
-				// video.style.height = '' + this.params.dest_height + 'px';
-				
-				// if ((scaleX != 1.0) || (scaleY != 1.0)) {
-				// 	elem.style.overflow = 'hidden';
-				// 	video.style.webkitTransformOrigin = '0px 0px';
-				// 	video.style.mozTransformOrigin = '0px 0px';
-				// 	video.style.msTransformOrigin = '0px 0px';
-				// 	video.style.oTransformOrigin = '0px 0px';
-				// 	video.style.transformOrigin = '0px 0px';
-				// 	video.style.webkitTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-				// 	video.style.mozTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-				// 	video.style.msTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-				// 	video.style.oTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-				// 	video.style.transform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-				// }
-				
+				video.style.width = '' + this.params.dest_width + 'px';
+				video.style.height = '' + this.params.dest_height + 'px';
+				video.style.display = 'block';
+
+				if ((scaleX != 1.0) || (scaleY != 1.0)) {
+					elem.style.overflow = 'hidden';
+					video.style.webkitTransformOrigin = '0px 0px';
+					video.style.mozTransformOrigin = '0px 0px';
+					video.style.msTransformOrigin = '0px 0px';
+					video.style.oTransformOrigin = '0px 0px';
+					video.style.transformOrigin = '0px 0px';
+					video.style.webkitTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					video.style.mozTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					video.style.msTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					video.style.oTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					video.style.transform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					video.style.left = '-'+video.style.width+'px';
+				}
+
 				// add video element to dom
 				elem.appendChild( video );
 				this.video = video;
@@ -465,6 +473,8 @@
 				this.mediaDevices.getUserMedia({
 					"audio": false,
 					"video": this.params.constraints || {
+						// width: this.params.dest_width,
+						// height: this.params.dest_height,
 						mandatory: {
 							minWidth: this.params.dest_width,
 							minHeight: this.params.dest_height
@@ -472,8 +482,16 @@
 					}
 				})
 				.then( function(stream) {
+
+				  console.log("Video stream", stream);
 					// got access, attach stream to video
 					video.onloadedmetadata = function(e) {
+
+            console.log("Video metadata", e.target.videoWidth, e.target.videoHeight);
+
+            self.params.width = self.params.dest_width = e.target.videoWidth;
+            self.params.height = self.params.dest_height = e.target.videoHeight;
+
 						self.stream = stream;
 						self.loaded = true;
 						self.live = true;
@@ -738,47 +756,9 @@
 				if (flashvars) flashvars += '&';
 				flashvars += key + '=' + escape(this.params[key]);
 			}
-			
-			// construct object/embed tag
-			html += '<div class="webcam_flash_wrapper">' +
-				'<div class="webcam_flash_anchor">' +
-					'<object class="webcam_flash" ' +
-							'classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" ' +
-							'type="application/x-shockwave-flash" ' +
-							'codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" ' +
-        			// 'width="100%"' +
-							'id="webcam_movie_obj" ' +
-							'align="middle">' +
-						'<param name="wmode" value="opaque" />' +
-						'<param name="allowScriptAccess" value="always" />' +
-						'<param name="allowFullScreen" value="false" />' +
-						'<param name="movie" value="'+swfURL+'" />' +
-						'<param name="loop" value="false" />' +
-						'<param name="menu" value="false" />' +
-						'<param name="quality" value="best" />' +
-						'<param name="bgcolor" value="#000000" />' +
-						'<param name="flashvars" value="'+flashvars+'"/>' +
-        		'<param name="SCALE" value="exactfit"/>' +
-						'<embed id="webcam_movie_embed" ' +
-							'src="'+swfURL+'" ' +
-							'wmode="opaque" ' +
-							'loop="false" ' +
-							'menu="false" ' +
-							'quality="best" ' +
-							'bgcolor="#000000" ' +
-      				'width="100%"' +
-        			'height="100%"' +
-							'name="webcam_movie_embed" ' +
-							'align="middle" ' +
-							'SCALE="exactfit" ' +
-							'allowScriptAccess="always" ' +
-							'allowFullScreen="false" ' +
-							'type="application/x-shockwave-flash" ' +
-							'pluginspage="http://www.macromedia.com/go/getflashplayer" ' +
-							'flashvars="'+flashvars+'"></embed>' +
-						'</object>' +
-					'</div>' +
-				'</div>';
+
+
+      html += '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" type="application/x-shockwave-flash" codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="'+this.params.width+'" height="'+this.params.height+'" id="webcam_movie_obj" align="middle"><param name="wmode" value="opaque" /><param name="allowScriptAccess" value="always" /><param name="allowFullScreen" value="false" /><param name="movie" value="'+swfURL+'" /><param name="loop" value="false" /><param name="menu" value="false" /><param name="quality" value="best" /><param name="bgcolor" value="#000000" /><param name="flashvars" value="'+flashvars+'"/><embed id="webcam_movie_embed" src="'+swfURL+'" wmode="opaque" loop="false" menu="false" quality="best" bgcolor="#000000" width="'+this.params.width+'" height="'+this.params.height+'" name="webcam_movie_embed" align="middle" allowScriptAccess="always" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" flashvars="'+flashvars+'"></embed></object>';
 			
 			return html;
 		},
@@ -815,7 +795,7 @@
 			var preview_canvas = document.createElement('canvas');
 			preview_canvas.width = final_width;
 			preview_canvas.height = final_height;
-			var preview_context = preview_canvas.getContext('2d');
+			var preview_context = preview_canvas.getContext('2d', { alpha: false });
 			
 			// save for later use
 			this.preview_canvas = preview_canvas;
@@ -903,10 +883,11 @@
 			
 			// render to user canvas if desired
 			if (user_canvas) {
-				var user_context = user_canvas.getContext('2d');
+				var user_context = user_canvas.getContext('2d', { alpha: false });
 				user_context.drawImage( canvas, 0, 0 );
 			}
 			
+			self.dispatch('processing', new ProcessingEvent('complete'));
 			// fire user callback if desired
 			user_callback(
 				user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
@@ -941,7 +922,7 @@
 			var canvas = document.createElement('canvas');
 			canvas.width = this.params.dest_width;
 			canvas.height = this.params.dest_height;
-			var context = canvas.getContext('2d');
+			var context = canvas.getContext('2d', { alpha: false });
 			
 			// flip canvas horizontally if desired
 			if (this.params.flip_horiz) {
@@ -961,7 +942,7 @@
 				// 	var crop_canvas = document.createElement('canvas');
 				// 	crop_canvas.width = params.crop_width;
 				// 	crop_canvas.height = params.crop_height;
-				// 	var crop_context = crop_canvas.getContext('2d');
+				// 	var crop_context = crop_canvas.getContext('2d', { alpha: false });
 				//
 				// 	crop_context.drawImage( canvas,
 				// 		Math.floor( (params.dest_width / 2) - (params.crop_width / 2) ),
@@ -981,13 +962,12 @@
 				
 				// render to user canvas if desired
 				if (user_canvas) {
-					var user_context = user_canvas.getContext('2d');
+					var user_context = user_canvas.getContext('2d', { alpha: false });
 					user_context.drawImage( canvas, 0, 0 );
 				}
 
-				console.log("made it here");
-				
 				// fire user callback if desired
+				self.dispatch('processing', new ProcessingEvent('complete'));
 				user_callback(
 					user_canvas ? null : canvas.toDataURL('image/' + params.image_format, params.jpeg_quality / 100 ),
 					canvas,
