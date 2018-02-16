@@ -40,8 +40,11 @@
 		private var image_format:String;
 		private var fps:int;
 		private var flip_horiz:Boolean;
-		
+				
 		public function Webcam() {
+			
+			txtInfo.text = "launching";			
+			
 			// class constructor
 			flash.system.Security.allowDomain("*");
 			var flashvars:Object = LoaderInfo(this.root.loaderInfo).parameters;
@@ -56,12 +59,13 @@
 			flip_horiz = flashvars.flip_horiz == "true";
 			
 			stage.scaleMode = StageScaleMode.NO_SCALE;
-			// stage.scaleMode = StageScaleMode.EXACT_FIT; // Note: This breaks HD capture
-			
+			//stage.scaleMode = StageScaleMode.EXACT_FIT; // Note: This breaks HD capture
 			stage.align = StageAlign.TOP_LEFT;
-			stage.stageWidth = Math.max(video_width, dest_width);
-			stage.stageHeight = Math.max(video_height, dest_height);
-						
+			
+			// they were setting the stage size!! that's what was breaking it!
+			//stage.stageWidth = Math.max(video_width, dest_width);
+			//stage.stageHeight = Math.max(video_height, dest_height);
+									
 			if (flashvars.new_user) {
 				Security.showSettings( SecurityPanel.PRIVACY );
 			}
@@ -83,8 +87,11 @@
 				camera.addEventListener(StatusEvent.STATUS, handleCameraStatus, false, 0, true);
 				video = new Video( Math.max(video_width, dest_width), Math.max(video_height, dest_height) );
 				video.attachCamera(camera);
-				addChild(video);
+				addChildAt(video, 0);
 				
+				stage.addEventListener(Event.RESIZE, onResize);
+				onResize(null);
+				/*
 				if ((video_width < dest_width) && (video_height < dest_height)) {
 					video.scaleX = video_width / dest_width;
 					video.scaleY = video_height / dest_height;
@@ -94,11 +101,11 @@
 					video.scaleX *= -1;
 					video.x = video.width + video.x;
 				}
-				
+				*/
 				camera.setQuality(0, 100);
 				camera.setKeyFrameInterval(10);
 				camera.setMode( Math.max(video_width, dest_width), Math.max(video_height, dest_height), fps );
-				
+								
 				// only detect motion once, to determine when camera is "live"
 				camera.setMotionLevel( 1 );
 				
@@ -112,6 +119,20 @@
 				trace("You need a camera.");
 				ExternalInterface.call('Webcam.flashNotify', "error", "No camera was detected.");
 			}
+		}
+		
+		public function onResize(e:Event):void {
+			//video.scaleX = 1;
+			//video.x = 0;
+			video.width = stage.stageWidth;
+			video.height = stage.stageHeight;
+			
+			if (flip_horiz) {
+				video.scaleX *= -1;
+				video.x = video.width;
+			}
+			
+			txtInfo.text = flip_horiz + ", " + String(video.x) + ", " + String(video.width) + ", " + String(video.scaleX);
 		}
 		
 		public function configure(panel:String = SecurityPanel.CAMERA) {

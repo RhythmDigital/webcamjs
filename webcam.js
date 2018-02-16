@@ -529,8 +529,11 @@
 				// flash fallback
 				window.Webcam = Webcam; // needed for flash-to-js interface
 				var div = document.createElement('div');
-				elem.innerHTML = this.getSWFHTML();
-				// elem.appendChild( div );
+				div.style.display = 'block';
+				div.style.position = 'relative';
+				div.style.height = '100%';
+				div.innerHTML = this.getSWFHTML();
+				elem.appendChild( div );
 			}
 			else if (this.params.enable_file_picker && window.FileReader) {
 				var input = document.createElement('input');
@@ -762,7 +765,7 @@
 			}
 
 
-      html += '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" type="application/x-shockwave-flash" codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="100%" height="100%" id="webcam_movie_obj" align="middle"><param name="wmode" value="opaque" /><param name="allowScriptAccess" value="always" /><param name="scale" value="showAll" /><param name="allowFullScreen" value="false" /><param name="movie" value="'+swfURL+'" /><param name="loop" value="false" /><param name="menu" value="false" /><param name="quality" value="best" /><param name="bgcolor" value="#000000" /><param name="flashvars" value="'+flashvars+'"/><embed id="webcam_movie_embed" src="'+swfURL+'" wmode="opaque" loop="false" menu="false" quality="best" bgcolor="#000000" width="100%" height="100%" name="webcam_movie_embed" align="middle" allowScriptAccess="always" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" flashvars="'+flashvars+'"></embed></object>';
+      html += '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" type="application/x-shockwave-flash" codebase="'+this.protocol+'://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="100%" height="100%" id="webcam_movie_obj" align="middle" style="position:relative; display: block; height:100%;"><param name="wmode" value="opaque" /><param name="allowScriptAccess" value="always" /><param name="allowFullScreen" value="false" /><param name="movie" value="'+swfURL+'" /><param name="loop" value="false" /><param name="menu" value="false" /><param name="quality" value="best" /><param name="bgcolor" value="#000000" /><param name="flashvars" value="'+flashvars+'"/><embed id="webcam_movie_embed" src="'+swfURL+'" wmode="opaque" loop="false" menu="false" quality="best" bgcolor="#000000" width="100%" height="100%" name="webcam_movie_embed" align="middle" allowScriptAccess="always" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" flashvars="'+flashvars+'"></embed></object>';
 
 			return html;
 		},
@@ -942,27 +945,27 @@
 				}
 				
 				// // crop if desired
-				// if (params.crop_width && params.crop_height) {
-				// 	var crop_canvas = document.createElement('canvas');
-				// 	crop_canvas.width = params.crop_width;
-				// 	crop_canvas.height = params.crop_height;
-				// 	var crop_context = crop_canvas.getContext('2d', { alpha: false });
-				//
-				// 	crop_context.drawImage( canvas,
-				// 		Math.floor( (params.dest_width / 2) - (params.crop_width / 2) ),
-				// 		Math.floor( (params.dest_height / 2) - (params.crop_height / 2) ),
-				// 		params.crop_width,
-				// 		params.crop_height,
-				// 		0,
-				// 		0,
-				// 		params.crop_width,
-				// 		params.crop_height
-				// 	);
-				//
-				// 	// swap canvases
-				// 	context = crop_context;
-				// 	canvas = crop_canvas;
-				// }
+				if (params.crop_width && params.crop_height) {
+					var crop_canvas = document.createElement('canvas');
+					crop_canvas.width = params.crop_width;
+					crop_canvas.height = params.crop_height;
+					var crop_context = crop_canvas.getContext('2d', { alpha: false });
+
+					crop_context.drawImage( canvas,
+						Math.floor( (params.dest_width / 2) - (params.crop_width / 2) ),
+						Math.floor( (params.dest_height / 2) - (params.crop_height / 2) ),
+						params.crop_width,
+						params.crop_height,
+						0,
+						0,
+						params.crop_width,
+						params.crop_height
+					);
+
+					// swap canvases
+					context = crop_context;
+					canvas = crop_canvas;
+				}
 				
 				// render to user canvas if desired
 				if (user_canvas) {
