@@ -43,8 +43,6 @@
 				
 		public function Webcam() {
 			
-			txtInfo.text = "launching";			
-			
 			// class constructor
 			flash.system.Security.allowDomain("*");
 			var flashvars:Object = LoaderInfo(this.root.loaderInfo).parameters;
@@ -131,8 +129,6 @@
 				video.scaleX *= -1;
 				video.x = video.width;
 			}
-			
-			txtInfo.text = flip_horiz + ", " + String(video.x) + ", " + String(video.width) + ", " + String(video.scaleX);
 		}
 		
 		public function configure(panel:String = SecurityPanel.CAMERA) {
