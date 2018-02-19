@@ -410,10 +410,10 @@
 			elem.innerHTML = ''; // start with empty element
 			
 			// insert "peg" so we can insert our preview canvas adjacent to it later on
-			var peg = document.createElement('div');
-			elem.appendChild( peg );
-			this.peg = peg;
-			
+			// var peg = document.createElement('div');
+			// elem.appendChild( peg );
+			// this.peg = peg;
+			//
 			// set width/height if not already set
 			if (!this.params.width) this.params.width = elem.offsetWidth;
 			if (!this.params.height) this.params.height = elem.offsetHeight;
@@ -445,10 +445,10 @@
 				// setup webcam video container
 				var video = document.createElement('video');
 				video.setAttribute('autoplay', 'autoplay');
-				video.setAttribute('data-object-fit', 'cover');
-				video.style.width = '' + this.params.dest_width + 'px';
-				video.style.height = '' + this.params.dest_height + 'px';
-				video.style.display = 'block';
+				// video.setAttribute('data-object-fit', 'cover');
+				// video.style.width = '' + this.params.dest_width + 'px';
+				// video.style.height = '' + this.params.dest_height + 'px';
+				// video.style.display = 'block';
 
 				if ((scaleX != 1.0) || (scaleY != 1.0)) {
 					elem.style.overflow = 'hidden';
@@ -493,8 +493,8 @@
             self.params.width = self.params.dest_width = e.target.videoWidth;
             self.params.height = self.params.dest_height = e.target.videoHeight;
 
-            video.style.width = '' + self.params.width + 'px';
-            video.style.height = '' + self.params.height + 'px';
+            // video.style.width = '' + self.params.width + 'px';
+            // video.style.height = '' + self.params.height + 'px';
 
 						self.stream = stream;
 						self.loaded = true;
