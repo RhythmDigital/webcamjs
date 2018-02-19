@@ -450,20 +450,20 @@
 				// video.style.height = '' + this.params.dest_height + 'px';
 				// video.style.display = 'block';
 
-				if ((scaleX != 1.0) || (scaleY != 1.0)) {
-					elem.style.overflow = 'hidden';
-					video.style.webkitTransformOrigin = '0px 0px';
-					video.style.mozTransformOrigin = '0px 0px';
-					video.style.msTransformOrigin = '0px 0px';
-					video.style.oTransformOrigin = '0px 0px';
-					video.style.transformOrigin = '0px 0px';
-					video.style.webkitTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.mozTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.msTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.oTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.transform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
-					video.style.left = '-'+video.style.width+'px';
-				}
+				// if ((scaleX != 1.0) || (scaleY != 1.0)) {
+					// elem.style.overflow = 'hidden';
+					// video.style.webkitTransformOrigin = '0px 0px';
+					// video.style.mozTransformOrigin = '0px 0px';
+					// video.style.msTransformOrigin = '0px 0px';
+					// video.style.oTransformOrigin = '0px 0px';
+					// video.style.transformOrigin = '0px 0px';
+					// video.style.webkitTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					// video.style.mozTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					// video.style.msTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					// video.style.oTransform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					// video.style.transform = 'scaleX('+scaleX+') scaleY('+scaleY+')';
+					// video.style.left = '-'+video.style.width+'px';
+				// }
 
 				// add video element to dom
 				elem.appendChild( video );
