@@ -870,7 +870,7 @@
 		
 		unflip: function() {
 			// unflip container horiz (mirror mode) if desired
-			if (this.params.flip_horiz) {
+			if (this.params.flip_horiz && this.container) {
 				var sty = this.container.style;
 				sty.webkitTransform = 'scaleX(1)';
 				sty.mozTransform = 'scaleX(1)';
