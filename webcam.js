@@ -759,7 +759,7 @@
 			
 			// construct flashvars string
 			var flashvars = '';
-			for (var key in this.params) {zz
+			for (var key in this.params) {
 				if (flashvars) flashvars += '&';
 				flashvars += key + '=' + escape(this.params[key]);
 			}
