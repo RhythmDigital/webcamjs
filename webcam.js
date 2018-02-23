@@ -83,7 +83,8 @@
 		live: false,     // true when webcam is initialized and ready to snap
 		userMedia: true, // true when getUserMedia is supported natively
 		showingPreview: false,
-		
+		captureMode: null,
+
 		iOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
 		android: /Android/.test(navigator.userAgent) && !window.MSStream,
 		
@@ -389,6 +390,7 @@
 
 		launchNativeCamera: function() {
 			console.log("Launching native camera");
+      this.captureMode = 'mobile-native';
       this.nativeCameraInput.style.display = 'block';
       this.nativeCameraInput.focus();
       this.nativeCameraInput.click();
@@ -442,6 +444,7 @@
 			var scaleY = this.params.height / this.params.dest_height;
 			
 			if (this.userMedia) {
+        this.captureMode = 'webrtc';
 				// setup webcam video container
 				var video = document.createElement('video');
 				video.setAttribute('autoplay', 'autoplay');
@@ -525,6 +528,8 @@
 				});
 			}
 			else if (this.params.enable_flash && this.detectFlash()) {
+
+        this.captureMode = 'flash';
 				console.log("Falling back to flash");
 				// flash fallback
 				window.Webcam = Webcam; // needed for flash-to-js interface
